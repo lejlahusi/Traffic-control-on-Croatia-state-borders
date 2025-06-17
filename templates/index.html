@@ -1,0 +1,99 @@
+{% extends "base.html" %} {% block content %}
+<h1>
+  Traffic Monitoring - {{ (granica|default("Select a Location")|replace('_', '
+  '))|capitalize }}
+</h1>
+
+{% if granica and granica in places_dict %}
+<div class="image-container">
+  <!-- Loop through the IDs for the selected granica -->
+  {% if granica in places_dict %} {% for image_id in places_dict[granica]["ids"]
+  %}
+  <!-- Image with dynamic timestamp for cache busting -->
+  <img
+    id="traffic_image_{{ image_id }}"
+    src="/static/output_image_{{ image_id }}.jpg"
+    alt="Traffic Image for {{ granica }} (ID: {{ image_id }})"
+    class="responsive-image"
+  />
+  <div id="traffic_data_{{image_id}}">
+    <p>Vehicle Count: {{ vehicle_count }}</p>
+    <p>Updated at: {{ timestamp }}</p>
+  </div>
+  {% endfor %} {% else %}
+  <p>No images available for the selected location.</p>
+  {% endif %}
+</div>
+
+<script>
+  // Function to update the images for all IDs with a new timestamp to avoid caching
+  function updateImages() {
+    const timestamp = new Date().getTime(); // Get the current timestamp
+    console.log("trzing to update image");
+  }
+
+  // Function to fetch the latest vehicle count
+  async function fetchData() {
+    try {
+      const response = await fetch(`/count_cars?granica={{ granica }}`);
+      if (response.ok) {
+        const data = await response.json();
+        // Check if places_dict and granica exist
+        if (
+          data.places_dict &&
+          data.granica &&
+          data.places_dict[data.granica]
+        ) {
+          const ids = data.places_dict[data.granica]["ids"];
+
+          // Verify if 'ids' is an array
+          if (Array.isArray(ids)) {
+            // Iterate over each image ID and update its source
+            ids.forEach((element) => {
+              const elementid = document.getElementById(
+                "traffic_image_" + element
+              );
+              if (elementid) {
+                // Update the image source with a timestamp to avoid caching
+                elementid.src =
+                  "/static/output_image_" +
+                  element +
+                  ".jpg?" +
+                  new Date().getTime();
+              } else {
+                console.warn(
+                  `Image element with ID traffic_image_${element} not found.`
+                );
+              }
+              // Display updated vehicle count and timestamp
+              const elementdes = (document.getElementById(
+                "traffic_data_" + element
+              ).innerHTML = `
+                <p>Vehicle Count: ${data.vehicle_count}</p>
+                <p>Updated at: ${data.timestamp}</p>`);
+            });
+          } else {
+            console.error("Expected 'ids' to be an array, but got:", ids);
+          }
+        } else {
+          console.error("Missing data in places_dict or granica.");
+        }
+      } else {
+        console.error("Failed to fetch vehicle count data.");
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  }
+
+  // Periodically update the images and fetch data
+  //setInterval(updateImages, 5000); // Update images every 5 seconds
+  setInterval(fetchData, 10000); // Fetch data every 5 seconds
+
+  // Fetch data and update images when the page loads
+  //updateImages();
+  fetchData();
+</script>
+{% else %}
+<p>Please select a location from the sidebar to view traffic data.</p>
+{% endif %} {% endblock %}

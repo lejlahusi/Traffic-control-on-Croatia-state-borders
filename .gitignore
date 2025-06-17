@@ -1,0 +1,4 @@
+__pycache__/
+static/*.png
+*.csv
+yolo_files/
